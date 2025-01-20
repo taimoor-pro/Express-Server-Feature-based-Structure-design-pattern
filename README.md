@@ -111,3 +111,7 @@ project-root/
 
 
 ```
+
+### Auth Module Working 
+
+- Auth With JWT
