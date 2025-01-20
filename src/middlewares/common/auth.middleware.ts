@@ -1,21 +1,26 @@
-import { Request, Response, NextFunction } from 'express';
-import { AuthService } from '../../api/auth/auth.service';
+import { NextFunction, Request, Response } from "express";
+import { IJwtPayload } from "../../api/user/user.types";
+import { verifyToken } from "../../utils/jwt.util";
 
-class AuthMiddleware {
-  static async authenticate(req: Request, res: Response, next: NextFunction) {
-    try {
-      const token = req.headers['authorization']?.split(' ')[1];
-      if (!token) {
-        return res.status(401).json({ error: 'Authorization token required' });
-      }
+export const authenticate = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void => {
+  const authHeader = req.headers.authorization;
 
-      const decoded = await AuthService.authenticate(token);
-      req.user = decoded;
-      next();
-    } catch (error) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    res.status(401).json({ message: "Unauthorized: No token provided" });
+    return;
   }
-}
 
-export { AuthMiddleware };
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const decoded = verifyToken(token) as IJwtPayload;
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.status(401).json({ message: "Unauthorized: Invalid token" });
+  }
+};

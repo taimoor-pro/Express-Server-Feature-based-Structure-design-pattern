@@ -1,44 +1,52 @@
-import { Request, Response } from 'express';
-import { AuthService } from '../services/auth.service';
-import { validationResult } from 'express-validator';
+import { NextFunction, Request, Response } from "express";
+import { getReasonPhrase, StatusCodes } from "http-status-codes";
+import authService from "./auth.service";
 
 class AuthController {
-  static async register(req: Request, res: Response) {
+  public async register(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      // Validate input data
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+      const user = await authService.register(req.body);
+      res.status(StatusCodes.CREATED).json({
+        data: user,
+        message: getReasonPhrase(StatusCodes.CREATED),
+      });
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === "Email already in use") {
+        res.status(StatusCodes.CONFLICT).json({
+          message: err.message,
+        });
+        return;
       }
-
-      // Register user
-      const { username, email, password } = req.body;
-      const user = await AuthService.register(username, email, password);
-      return res.status(201).json({ message: 'User created successfully', user });
-    } catch (error) {
-      return res.status(500).json({ error: error.message });
+      next(err);
     }
   }
 
-  static async login(req: Request, res: Response) {
+  public async login(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { email, password } = req.body;
-      const token = await AuthService.login(email, password);
-      return res.status(200).json({ message: 'Login successful', token });
-    } catch (error) {
-      return res.status(500).json({ error: error.message });
-    }
-  }
-
-  static async authenticate(req: Request, res: Response) {
-    try {
-      const token = req.headers['authorization']?.split(' ')[1];
-      const decoded = await AuthService.authenticate(token);
-      return res.status(200).json({ message: 'Authentication successful', user: decoded });
-    } catch (error) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      const token = await authService.login(email, password);
+      res.status(StatusCodes.OK).json({
+        token,
+        message: getReasonPhrase(StatusCodes.OK),
+      });
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === "Invalid email or password") {
+        res.status(StatusCodes.UNAUTHORIZED).json({
+          message: err.message,
+        });
+        return;
+      }
+      next(err);
     }
   }
 }
 
-export { AuthController };
+export default new AuthController();

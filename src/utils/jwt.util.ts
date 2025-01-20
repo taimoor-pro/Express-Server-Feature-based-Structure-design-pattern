@@ -1,17 +1,21 @@
-import jwt from 'jsonwebtoken';
+import jwt, { Secret, SignOptions } from "jsonwebtoken";
+import { IJwtPayload } from "../api/user/user.types";
+import { config } from "../config";
 
-class JwtUtil {
-  static generateToken(payload: object) {
-    return jwt.sign(payload, process.env.JWT_SECRET as string, { expiresIn: '1h' });
-  }
+const secretKey: Secret = process.env.JWT_SECRET || "defaultSecretKey";
 
-  static verifyToken(token: string) {
-    try {
-      return jwt.verify(token, process.env.JWT_SECRET as string);
-    } catch (err) {
-      throw new Error('Invalid or expired token');
-    }
-  }
-}
+// Sign token
+export const signToken = (
+  payload: IJwtPayload,
+  options?: SignOptions,
+): string => {
+  return jwt.sign(payload, secretKey, {
+    expiresIn: "1h",
+    ...options,
+  });
+};
 
-export { JwtUtil };
+// Verify token
+export const verifyToken = (token: string): IJwtPayload => {
+  return jwt.verify(token, secretKey) as IJwtPayload;
+};

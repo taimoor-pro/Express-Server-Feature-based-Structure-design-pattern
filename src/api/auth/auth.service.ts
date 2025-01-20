@@ -1,51 +1,74 @@
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { UserModel } from '../models/user.model';
+import bcrypt from "bcrypt";
+import { signToken } from "../../utils/jwt.util";
+import UserModel from "../user/user.model";
+import { IUser, UserRole } from "../user/user.types";
 
 class AuthService {
-  static async register(username: string, email: string, password: string) {
-    // Check if user exists
-    const existingUser = await UserModel.findOne({ email });
-    if (existingUser) {
-      throw new Error('User already exists');
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create and save user
-    const user = new UserModel({ username, email, password: hashedPassword });
-    await user.save();
-
-    return user;
-  }
-
-  static async login(email: string, password: string) {
-    const user = await UserModel.findOne({ email });
-    if (!user) {
-      throw new Error('Invalid credentials');
-    }
-
-    // Check password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      throw new Error('Invalid credentials');
-    }
-
-    // Generate JWT token
-    const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET as string, { expiresIn: '1h' });
-    return token;
-  }
-
-  static async authenticate(token: string) {
+  public async register(userData: IUser): Promise<IUser> {
     try {
-      // Verify and decode the JWT token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
-      return decoded;
-    } catch (error) {
-      throw new Error('Invalid or expired token');
+      const hashedPassword = await bcrypt.hash(userData.password, 10);
+      const user = await UserModel.create({
+        ...userData,
+        password: hashedPassword,
+      });
+      return user;
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        "code" in err &&
+        (err as { code: number }).code === 11000
+      ) {
+        throw new Error("Duplicate key error: Email already exists");
+      }
+      if (err instanceof Error) {
+        throw new Error(`Error registering user: ${err.message}`);
+      }
+      throw new Error("Unexpected error occurred during registration");
+    }
+  }
+
+  public async login(email: string, password: string): Promise<string> {
+    try {
+      const user = await UserModel.findOne({ email });
+      if (!user) {
+        throw new Error("Invalid email or password");
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        throw new Error("Invalid email or password");
+      }
+
+      const token = signToken({
+        id: user.id,
+        role: user.role,
+        email: user.email,
+        username: user.username,
+      });
+
+      return token;
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        throw new Error(`Error during login: ${err.message}`);
+      }
+      throw new Error("Unexpected error occurred during login");
+    }
+  }
+
+  public async checkRole(userId: string, role: UserRole): Promise<boolean> {
+    try {
+      const user = await UserModel.findById(userId);
+      if (!user) {
+        throw new Error("User not found");
+      }
+      return user.role === role;
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        throw new Error(`Error checking role: ${err.message}`);
+      }
+      throw new Error("Unexpected error occurred while checking role");
     }
   }
 }
 
-export { AuthService };
+export default new AuthService();

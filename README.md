@@ -9,21 +9,33 @@
 - TypeScript Support and Config
 - Basic CLI for crating new module
 
-### How to use CLI
-
 ```bash
 npm install tsx --save-dev
 or
 npm install -g tsx
 npm install -g bun
 bun install
+
+# Add any package
+bun add packageName
+
+# Add Dev Package
+bun add --save-dev packageName
 ```
+
+### Start For Development
+
+```bash
+bun start dev
+```
+
+### How to use CLI
 
 ```bash
 
 npm run cli
 
-or 
+or
 
 make cli
 ```
@@ -32,15 +44,21 @@ make cli
 - Based on that will create controller, route and validation files inside API folder
 
 ### Recommended Folder Structure:
+
  <!-- Feature-based Structure design pattern -->
-  ______
+
+---
+
 < Hi! >
- ------
+
+---
+
         \   ^__^
          \  (oo)\_______
             (__)\       )\/\
                 ||----w |
                 ||     ||
+
 ```bash
 
 project-root/
@@ -112,6 +130,6 @@ project-root/
 
 ```
 
-### Auth Module Working 
+### Auth Module Working
 
 - Auth With JWT
